@@ -106,6 +106,66 @@ def test_ops_status_update(client, db_session, ops_auth_headers):
     assert "Spoke to manager Ramesh" in data["notes"]
 
 
+def test_ops_status_update_rejected_preserves_row_status_and_emits_event(client, db_session, ops_auth_headers, monkeypatch):
+    """
+    Verify that when ops marks a request as REJECTED:
+    1. The database row status is strictly REJECTED (never collapsed to ALTERNATE_NEEDED).
+    2. The Redis Pub/Sub event emitted is specifically 'BOOKING_REJECTED'.
+    """
+    v = Vendor(
+        id=uuid.uuid4(),
+        name="Calangute Scuba Club",
+        category=VendorCategory.ACTIVITY,
+        partnership_status=PartnershipStatus.NON_PARTNERED,
+    )
+    db_session.add(v)
+    db_session.commit()
+
+    req = FulfillmentRequest(
+        id=uuid.uuid4(),
+        itinerary_id="itin_ops_reject",
+        vendor_id=v.id,
+        status=FulfillmentStatus.OUTREACH_IN_PROGRESS,
+        booking_channel=BookingChannel.HITL_MANUAL,
+    )
+    db_session.add(req)
+    db_session.commit()
+
+    # Track emitted events
+    emitted_events = []
+    from app.services.event_publisher import event_publisher
+    monkeypatch.setattr(
+        event_publisher,
+        "publish_event",
+        lambda event_type, payload: emitted_events.append((event_type, payload)),
+    )
+
+    update_payload = {
+        "status": "REJECTED",
+        "assigned_ops_agent": "ops_vaibhav",
+        "notes": "Vendor declined: fully booked for requested dates.",
+    }
+
+    res = client.patch(
+        f"/api/v1/ops/requests/{req.id}/status",
+        headers=ops_auth_headers,
+        json=update_payload,
+    )
+    assert res.status_code == 200
+
+    # 1. Assert DB row level status is strictly REJECTED, NOT ALTERNATE_NEEDED
+    db_session.expire_all()
+    db_req = db_session.query(FulfillmentRequest).filter(FulfillmentRequest.id == req.id).first()
+    assert db_req.status == FulfillmentStatus.REJECTED
+    assert db_req.status != FulfillmentStatus.ALTERNATE_NEEDED
+
+    # 2. Assert specific event type emitted is BOOKING_REJECTED
+    assert len(emitted_events) == 1
+    assert emitted_events[0][0] == "BOOKING_REJECTED"
+    assert emitted_events[0][1]["request_id"] == str(req.id)
+    assert emitted_events[0][1]["new_status"] == "REJECTED"
+
+
 def test_ops_get_vendor_contact(client, db_session, ops_auth_headers):
     """Ops staff views vendor contact details for manual outreach."""
     v = Vendor(
