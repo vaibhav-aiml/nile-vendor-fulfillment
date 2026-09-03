@@ -126,7 +126,6 @@ def update_fulfillment_status(
     db.commit()
     db.refresh(req)
 
-    # Publish state transition event over Redis Pub/Sub
     if req.status == FulfillmentStatus.CONFIRMED:
         event_type = "BOOKING_CONFIRMED"
     elif req.status == FulfillmentStatus.REJECTED:

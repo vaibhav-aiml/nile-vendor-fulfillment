@@ -22,17 +22,14 @@ export default function OpsDashboard() {
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  // Token configuration modal
   const [showTokenModal, setShowTokenModal] = useState<boolean>(false);
   const [tokenInput, setTokenInput] = useState<string>("");
 
-  // Outreach & Status Modal
   const [selectedRequest, setSelectedRequest] = useState<FulfillmentRequest | null>(null);
   const [vendorContact, setVendorContact] = useState<VendorContact | null>(null);
   const [loadingContact, setLoadingContact] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
 
-  // Form fields
   const [formStatus, setFormStatus] = useState<FulfillmentStatus>("OUTREACH_IN_PROGRESS");
   const [formPrice, setFormPrice] = useState<string>("");
   const [formAgent, setFormAgent] = useState<string>("ops_staff_1");
@@ -107,7 +104,6 @@ export default function OpsDashboard() {
     }
   };
 
-  // KPIs
   const totalCount = requests.length;
   const pendingCount = requests.filter((r) => r.status === "PENDING").length;
   const inProgressCount = requests.filter((r) => r.status === "OUTREACH_IN_PROGRESS").length;
@@ -122,7 +118,6 @@ export default function OpsDashboard() {
       </Head>
 
       <main className="container">
-        {/* Header */}
         <header className="header">
           <div>
             <div className="logo-badge">NILE • Travel Planning Pipeline (Stage 5)</div>
@@ -171,7 +166,6 @@ export default function OpsDashboard() {
           </div>
         </header>
 
-        {/* Metrics Grid */}
         <section className="metrics-grid">
           <div className="metric-card">
             <span className="metric-label">All Active</span>
@@ -203,7 +197,6 @@ export default function OpsDashboard() {
           </div>
         </section>
 
-        {/* Filters & Search */}
         <section className="filter-bar">
           <div className="status-tabs">
             {[
@@ -236,7 +229,6 @@ export default function OpsDashboard() {
           </div>
         </section>
 
-        {/* Content list */}
         {error && (
           <div
             style={{
@@ -368,7 +360,6 @@ export default function OpsDashboard() {
           </div>
         )}
 
-        {/* Modal for Token Setup */}
         {showTokenModal && (
           <div className="modal-overlay" onClick={() => setShowTokenModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -407,7 +398,6 @@ export default function OpsDashboard() {
           </div>
         )}
 
-        {/* Modal for Outreach & Status Update */}
         {selectedRequest && (
           <div className="modal-overlay" onClick={() => setSelectedRequest(null)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -421,7 +411,6 @@ export default function OpsDashboard() {
                 </button>
               </div>
 
-              {/* Vendor Contact Information Card */}
               <div className="contact-card">
                 <div style={{ fontSize: "0.75rem", textTransform: "uppercase", color: "var(--accent-cyan)", fontWeight: 700 }}>
                   Direct Vendor Contact Details
@@ -465,7 +454,6 @@ export default function OpsDashboard() {
                 )}
               </div>
 
-              {/* Status Update Form */}
               <form onSubmit={handleSaveStatus} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                 <div className="form-group">
                   <label className="form-label">Booking Outcome / Status</label>

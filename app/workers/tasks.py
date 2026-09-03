@@ -29,7 +29,6 @@ def attempt_partner_booking(request_id_str: str) -> dict:
         vendor = db.query(Vendor).filter(Vendor.id == req.vendor_id).first()
         adapter = get_partner_adapter(vendor.category.value if vendor else None)
 
-        # Call adapter
         booking_result = asyncio.run(
             adapter.book(
                 request_id=str(req.id),
@@ -48,7 +47,6 @@ def attempt_partner_booking(request_id_str: str) -> dict:
             req.notes = (req.notes or "") + f" [Programmatic booking confirmed: ref={req.external_reference_id}]"
             db.commit()
 
-            # Emit event to Redis Pub/Sub
             event_publisher.publish_event(
                 event_type="BOOKING_CONFIRMED",
                 payload={
@@ -123,7 +121,6 @@ def check_outreach_sla_timeouts() -> dict:
     escalated_count = 0
 
     try:
-        # Find all pending or in-progress HITL requests whose deadline has passed
         breached_requests = (
             db.query(FulfillmentRequest)
             .filter(
@@ -145,7 +142,6 @@ def check_outreach_sla_timeouts() -> dict:
             req.notes = (req.notes or "") + escalation_note
             escalated_count += 1
 
-            # Emit event to Redis
             event_publisher.publish_event(
                 event_type="OUTREACH_TIMEOUT",
                 payload={

@@ -109,13 +109,11 @@ def test_idempotency_duplicate_intake(db_session):
         ],
     )
 
-    # First intake
     reqs_1, is_dup_1 = process_itinerary_intake(db_session, intake)
     assert is_dup_1 is False
     assert len(reqs_1) == 1
     first_req_id = reqs_1[0].id
 
-    # Second intake with same itinerary_id
     reqs_2, is_dup_2 = process_itinerary_intake(db_session, intake)
     assert is_dup_2 is True
     assert len(reqs_2) == 1

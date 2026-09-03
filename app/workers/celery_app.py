@@ -17,7 +17,6 @@ celery_app.conf.update(
     task_track_started=True,
     broker_connection_retry_on_startup=False,
     broker_transport_options={"max_retries": 1},
-    # Periodic Celery Beat Schedule for SLA Timeout Checks
     beat_schedule={
         "check-outreach-sla-every-5-minutes": {
             "task": "app.workers.tasks.check_outreach_sla_timeouts",

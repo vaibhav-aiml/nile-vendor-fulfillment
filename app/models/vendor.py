@@ -43,7 +43,6 @@ class Vendor(Base):
     partnership_status = Column(SAEnum(PartnershipStatus, name="partnership_status_enum"), nullable=False, default=PartnershipStatus.NON_PARTNERED, index=True)
     verification_status = Column(SAEnum(VerificationStatus, name="verification_status_enum"), nullable=False, default=VerificationStatus.UNVERIFIED)
 
-    # Contact details for outreach
     contact_name = Column(String(255), nullable=True)
     contact_phone = Column(String(50), nullable=True)
     contact_email = Column(String(255), nullable=True)
@@ -55,7 +54,6 @@ class Vendor(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    # Relationships
     fulfillment_requests = relationship("FulfillmentRequest", back_populates="vendor", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:

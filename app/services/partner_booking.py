@@ -63,7 +63,6 @@ class StubPartnerBookingAdapter(PartnerBookingAdapter):
         service_date_end: Optional[datetime],
         group_size: int
     ) -> bool:
-        # Simulated partner availability check
         return True
 
     async def book(
@@ -75,7 +74,6 @@ class StubPartnerBookingAdapter(PartnerBookingAdapter):
         group_size: int,
         max_budget: Optional[Decimal] = None
     ) -> PartnerBookingResult:
-        # Simulated instantaneous partner API booking confirmation
         ref_id = f"PARTNER-CONF-{uuid.uuid4().hex[:8].upper()}"
         return PartnerBookingResult(
             success=True,

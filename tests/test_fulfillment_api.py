@@ -47,7 +47,6 @@ def test_intake_and_status_endpoints(client, db_session):
         ],
     }
 
-    # 1. Intake POST
     res = client.post("/api/v1/fulfillment/intake", json=intake_payload)
     assert res.status_code == 201
     data = res.json()
@@ -57,7 +56,6 @@ def test_intake_and_status_endpoints(client, db_session):
     assert data["pending_items"] == 1    # The non-partnered vendor is pending HITL outreach
     assert data["overall_fulfillment_status"] == "PARTIALLY_CONFIRMED"
 
-    # 2. Status GET
     res_status = client.get("/api/v1/fulfillment/itinerary/itin_end_to_end_001/status")
     assert res_status.status_code == 200
     status_data = res_status.json()

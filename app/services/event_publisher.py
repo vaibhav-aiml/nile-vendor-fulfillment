@@ -58,5 +58,4 @@ class EventPublisher:
             return False
 
 
-# Singleton instance for application use
 event_publisher = EventPublisher()

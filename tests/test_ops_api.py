@@ -49,13 +49,11 @@ def test_ops_list_and_filter_requests(client, db_session, ops_auth_headers):
     db_session.add_all([r1, r2])
     db_session.commit()
 
-    # List all
     res = client.get("/api/v1/ops/requests", headers=ops_auth_headers)
     assert res.status_code == 200
     data = res.json()
     assert data["total"] == 2
 
-    # Filter by status PENDING
     res_pending = client.get("/api/v1/ops/requests?status=PENDING", headers=ops_auth_headers)
     assert res_pending.status_code == 200
     assert res_pending.json()["total"] == 1
@@ -131,7 +129,6 @@ def test_ops_status_update_rejected_preserves_row_status_and_emits_event(client,
     db_session.add(req)
     db_session.commit()
 
-    # Track emitted events
     emitted_events = []
     from app.services.event_publisher import event_publisher
     monkeypatch.setattr(

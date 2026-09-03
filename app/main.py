@@ -15,7 +15,6 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS middleware for Ops Dashboard integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -24,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount application routers
 app.include_router(fulfillment_router)
 app.include_router(ops_router)
 app.include_router(vendors_router)

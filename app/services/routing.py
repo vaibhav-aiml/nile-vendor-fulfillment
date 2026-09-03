@@ -40,11 +40,9 @@ def route_and_dispatch_request(db: Session, request: FulfillmentRequest, vendor:
             import logging
             logging.getLogger(__name__).warning(f"Could not enqueue partner booking task to broker (is Redis running?): {e}")
     else:
-        # Non-partnered vendor -> Human-in-the-Loop outreach path
         request.booking_channel = BookingChannel.HITL_MANUAL
         request.status = FulfillmentStatus.PENDING
         
-        # Calculate SLA deadline (now + OUTREACH_SLA_HOURS)
         now_utc = datetime.now(timezone.utc)
         request.sla_deadline = now_utc + timedelta(hours=settings.OUTREACH_SLA_HOURS)
         db.commit()
@@ -70,7 +68,6 @@ def process_itinerary_intake(
         - Boolean `is_duplicate`: True if requests were already present and retrieved,
           False if newly created and dispatched.
     """
-    # 1. Check if requests already exist for this itinerary_id
     existing_requests = (
         db.query(FulfillmentRequest)
         .filter(FulfillmentRequest.itinerary_id == intake.itinerary_id)
@@ -83,7 +80,6 @@ def process_itinerary_intake(
 
     created_requests: List[FulfillmentRequest] = []
 
-    # 2. Iterate through itinerary items and validate vendors
     for item in intake.items:
         try:
             vendor_uuid = uuid.UUID(item.vendor_id)
@@ -100,7 +96,6 @@ def process_itinerary_intake(
                 detail=f"Vendor with id '{item.vendor_id}' not found. Discovery module sync may be required."
             )
 
-        # 3. Create fulfillment request record
         req = FulfillmentRequest(
             itinerary_id=intake.itinerary_id,
             vendor_id=vendor.id,
@@ -118,7 +113,6 @@ def process_itinerary_intake(
     # Commit all created requests first so workers see the persisted rows
     db.commit()
 
-    # Dispatch routing workflows
     for req, vendor in created_requests:
         route_and_dispatch_request(db, req, vendor)
 

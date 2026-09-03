@@ -54,12 +54,10 @@ def test_check_outreach_sla_timeouts_escalation(db_session):
     db_session.add_all([req_breached, req_healthy, req_confirmed])
     db_session.commit()
 
-    # Run periodic SLA escalation check
     result = check_outreach_sla_timeouts()
 
     assert result["escalated_count"] == 1
 
-    # Query updated state from DB
     updated_breached = db_session.query(FulfillmentRequest).filter(FulfillmentRequest.id == req_breached.id).first()
     updated_healthy = db_session.query(FulfillmentRequest).filter(FulfillmentRequest.id == req_healthy.id).first()
     updated_confirmed = db_session.query(FulfillmentRequest).filter(FulfillmentRequest.id == req_confirmed.id).first()

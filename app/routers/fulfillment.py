@@ -56,7 +56,6 @@ def intake_itinerary(
             )
         raise e
     
-    # Generate aggregated response using status_aggregator service
     response = build_itinerary_status_response(payload.itinerary_id, requests)
     return response
 
