@@ -2,7 +2,7 @@
 
 **Stage 5 of 5** in the NILE AI-powered travel planning pipeline for South India, launching with the Bangalore → Goa corridor.
 
-[![Tests](https://img.shields.io/badge/tests-19%2F19%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-23%2F23%20passing-brightgreen)]()
 [![Python](https://img.shields.io/badge/python-3.13-blue)]()
 [![FastAPI](https://img.shields.io/badge/FastAPI-async-009688)]()
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)]()
@@ -116,7 +116,7 @@ fulfillment-service/
 ├── scripts/
 │   ├── seed_demo_data.py           # seeds real Bangalore→Goa vendor examples
 │   └── verify_live_pipeline.py      # end-to-end smoke test against a running instance
-└── tests/                    # 19 tests covering routing, SLA, aggregation, ops API, contracts
+└── tests/                    # 23 tests covering routing, SLA, aggregation, ops API, contracts
 ```
 
 ---
@@ -156,7 +156,9 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 
 # Terminal 2 — Celery worker
-celery -A app.workers.celery_app worker --loglevel=info
+# Note: On Windows, Celery requires --pool=solo (default prefork pool is unsupported and raises billiard unpack errors)
+celery -A app.workers.celery_app worker --loglevel=info --pool=solo
+# On Linux / macOS: celery -A app.workers.celery_app worker --loglevel=info
 
 # Terminal 3 — Celery beat (SLA escalation)
 celery -A app.workers.celery_app beat --loglevel=info
@@ -185,7 +187,7 @@ This seeds a partnered vendor (Taj Holiday Village, Candolim) and a non-partnere
 pytest -v
 ```
 
-19 tests run entirely against in-memory SQLite with `task_always_eager=True`, so the full suite runs with no live database, Redis, or external dependency — anyone can clone and verify the logic in seconds.
+23 tests run entirely against in-memory SQLite with `task_always_eager=True`, so the full suite runs with no live database, Redis, or external dependency — anyone can clone and verify the logic in seconds.
 
 | Suite | Covers |
 |---|---|
