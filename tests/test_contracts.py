@@ -1,10 +1,14 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 import pytest
+from pydantic import ValidationError
 from app.schemas.contracts import (
     ItineraryFulfillmentIntakeRequest,
-    ItineraryItemIntake,
+    ActivityPlanIntake,
+    DayPlanIntake,
+    HotelPlanIntake,
+    ItineraryIntake,
     FulfillmentItemStatusReport,
     OverallFulfillmentStatus,
     ItineraryFulfillmentStatusResponse,
@@ -13,45 +17,110 @@ from app.models.booking import FulfillmentStatus
 from app.models.vendor import PartnershipStatus
 
 
-def test_mock_itinerary_intake_payload_valid():
-    """Validates that the upstream mock contract correctly parses a standard itinerary intake."""
-    vendor_1 = str(uuid.uuid4())
-    vendor_2 = str(uuid.uuid4())
-
-    payload = {
+def _make_valid_intake_payload(hotel_id=None, activity_id=None):
+    """Helper to build a valid nested intake payload dict."""
+    return {
         "itinerary_id": "itin_blr_goa_001",
         "customer_id": "cust_12345",
-        "trip_title": "Bangalore to Goa 4-Day Roadtrip",
-        "items": [
-            {
-                "vendor_id": vendor_1,
-                "service_date_start": "2026-10-10T10:00:00Z",
-                "service_date_end": "2026-10-10T12:00:00Z",
-                "group_size": 4,
-                "max_budget": "5000.00",
-                "notes": "Prefer window seating or outdoor deck"
+        "group_size": 4,
+        "itinerary": {
+            "destination": "Goa",
+            "start_date": "2026-10-10",
+            "end_date": "2026-10-12",
+            "hotel": {
+                "hotel_id": hotel_id or str(uuid.uuid4()),
+                "name": "Taj Holiday Village Resort",
             },
-            {
-                "vendor_id": vendor_2,
-                "service_date_start": "2026-10-11T14:00:00Z",
-                "service_date_end": "2026-10-12T11:00:00Z",
-                "group_size": 4,
-                "max_budget": "12000.00",
-                "notes": "King beds requested"
-            }
-        ]
+            "days": [
+                {
+                    "day": 1,
+                    "date": "2026-10-10",
+                    "activities": [
+                        {
+                            "activity_id": activity_id or str(uuid.uuid4()),
+                            "name": "Scuba Diving at Grande Island",
+                            "start_time": "09:00",
+                            "end_time": "12:00",
+                            "estimated_cost": 3500.00,
+                        }
+                    ],
+                },
+                {
+                    "day": 2,
+                    "date": "2026-10-11",
+                    "activities": [
+                        {
+                            "activity_id": str(uuid.uuid4()),
+                            "name": "Dudhsagar Falls Trek",
+                            "start_time": "06:00",
+                            "end_time": "14:00",
+                            "estimated_cost": 2000.00,
+                        },
+                        {
+                            "activity_id": str(uuid.uuid4()),
+                            "name": "Spice Plantation Tour",
+                            "start_time": "16:00",
+                            "end_time": "18:00",
+                            "estimated_cost": 800.00,
+                        },
+                    ],
+                },
+            ],
+            "estimated_total_cost": 18000.00,
+        },
     }
 
+
+def test_itinerary_intake_payload_valid():
+    """Validates that the nested intake contract correctly parses a real itinerary."""
+    payload = _make_valid_intake_payload()
     parsed = ItineraryFulfillmentIntakeRequest.model_validate(payload)
+
     assert parsed.itinerary_id == "itin_blr_goa_001"
-    assert len(parsed.items) == 2
-    assert parsed.items[0].vendor_id == vendor_1
-    assert parsed.items[0].group_size == 4
-    assert parsed.items[0].max_budget == Decimal("5000.00")
+    assert parsed.customer_id == "cust_12345"
+    assert parsed.group_size == 4
+    assert parsed.itinerary.destination == "Goa"
+    assert parsed.itinerary.hotel.name == "Taj Holiday Village Resort"
+    assert len(parsed.itinerary.days) == 2
+    assert len(parsed.itinerary.days[0].activities) == 1
+    assert len(parsed.itinerary.days[1].activities) == 2
+    assert parsed.itinerary.days[0].activities[0].start_time == "09:00"
+    assert parsed.itinerary.estimated_total_cost == 18000.00
 
 
-def test_mock_status_response_serialization():
-    """Validates the downstream status reporting contract schema."""
+def test_intake_rejects_missing_hotel():
+    """Hotel is required — omitting it must raise a validation error."""
+    payload = _make_valid_intake_payload()
+    del payload["itinerary"]["hotel"]
+    with pytest.raises(ValidationError) as exc_info:
+        ItineraryFulfillmentIntakeRequest.model_validate(payload)
+    assert "hotel" in str(exc_info.value).lower()
+
+
+def test_intake_rejects_missing_itinerary_id():
+    """itinerary_id is required on the envelope — never optional or derived."""
+    payload = _make_valid_intake_payload()
+    del payload["itinerary_id"]
+    with pytest.raises(ValidationError) as exc_info:
+        ItineraryFulfillmentIntakeRequest.model_validate(payload)
+    assert "itinerary_id" in str(exc_info.value).lower()
+
+
+def test_intake_validates_time_format():
+    """Activity times must be HH:MM (24h). Invalid formats must be rejected."""
+    payload = _make_valid_intake_payload()
+    payload["itinerary"]["days"][0]["activities"][0]["start_time"] = "25:00"
+    with pytest.raises(ValidationError):
+        ItineraryFulfillmentIntakeRequest.model_validate(payload)
+
+    payload2 = _make_valid_intake_payload()
+    payload2["itinerary"]["days"][0]["activities"][0]["end_time"] = "9:00"
+    with pytest.raises(ValidationError):
+        ItineraryFulfillmentIntakeRequest.model_validate(payload2)
+
+
+def test_status_response_serialization():
+    """Validates the downstream status reporting contract schema (unchanged)."""
     vendor_id = str(uuid.uuid4())
     req_id = str(uuid.uuid4())
 

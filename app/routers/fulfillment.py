@@ -27,11 +27,10 @@ def intake_itinerary(
     db: Session = Depends(get_db),
 ):
     """
-    # MOCK CONTRACT ENDPOINT — pending confirmation from Yashaswini/Aman
-
-    Receives a finalized itinerary payload, validates vendors, routes each item
-    (programmatic booking for Partnered vs Celery HITL queue for Non-Partnered),
-    and enforces idempotency on `itinerary_id`.
+    Receives a finalized itinerary payload (nested hotel + days/activities),
+    flattens it into individual FulfillmentRequest rows, validates vendors,
+    routes each item (programmatic booking for Partnered vs Celery HITL queue
+    for Non-Partnered), and enforces idempotency on `itinerary_id`.
     """
     try:
         requests, is_duplicate = process_itinerary_intake(db, payload)
@@ -70,8 +69,6 @@ def get_itinerary_fulfillment_status(
     db: Session = Depends(get_db),
 ):
     """
-    # MOCK CONTRACT ENDPOINT — pending confirmation
-
     Aggregates all vendor booking states for a given itinerary and returns the
     overall status (ALL_CONFIRMED, PARTIALLY_CONFIRMED, BLOCKED_ALTERNATE_NEEDED, IN_PROGRESS).
     """
