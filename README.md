@@ -207,17 +207,32 @@ Receives a finalized itinerary and routes each item to the appropriate booking p
 {
   "itinerary_id": "itin_blr_goa_001",
   "customer_id": "cust_12345",
-  "trip_title": "Bangalore to Goa 4-Day Roadtrip",
-  "items": [
-    {
-      "vendor_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "service_date_start": "2026-10-10T10:00:00Z",
-      "service_date_end": "2026-10-10T12:00:00Z",
-      "group_size": 4,
-      "max_budget": 5000.00,
-      "notes": "Outdoor deck preferred"
-    }
-  ]
+  "group_size": 4,
+  "itinerary": {
+    "destination": "Goa",
+    "start_date": "2026-10-10",
+    "end_date": "2026-10-12",
+    "hotel": {
+      "hotel_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      "name": "Taj Holiday Village Resort"
+    },
+    "days": [
+      {
+        "day": 1,
+        "date": "2026-10-10",
+        "activities": [
+          {
+            "activity_id": "7ca85f64-5717-4562-b3fc-2c963f66bbb7",
+            "name": "Scuba Diving at Grande Island",
+            "start_time": "09:00",
+            "end_time": "12:00",
+            "estimated_cost": 3500.00
+          }
+        ]
+      }
+    ],
+    "estimated_total_cost": 18000.00
+  }
 }
 ```
 
@@ -249,7 +264,7 @@ Full interactive documentation is available at `/docs` once the API is running.
 
 ## Design decisions worth knowing about
 
-- **Why mocked upstream/downstream contracts?** The exact payload shape from Itinerary Planning and Vendor Discovery isn't finalized yet. Every assumption lives in one file — `app/schemas/contracts.py`, explicitly flagged `# MOCK` — so integrating the real schema is a scoped, low-risk change rather than a rewrite.
+- **Why the nested intake schema?** The intake payload mirrors Yashaswini's confirmed `Itinerary` schema from the Itinerary & Recommendation Engine exactly (one hotel, days with nested activities). The flattening logic in `routing.py` maps this nested structure into individual `FulfillmentRequest` rows. Two fields (`group_size`, `customer_id`) are assumed to arrive as envelope siblings — their exact source is pending confirmation.
 - **Why Redis Pub/Sub and not Kafka?** Redis is already a dependency for Celery. Introducing a second message broker for event emission wasn't justified at this stage — the interface is kept clean enough to swap later if volume demands it.
 - **Why a static ops token instead of full JWT auth?** This is a phase-1 internal tool for a small ops team, not a public-facing surface. A shared secret header is proportionate to the actual risk right now and can be upgraded to per-agent auth without touching the booking logic.
 - **Why does `REJECTED` stay separate from `ALTERNATE_NEEDED` at the row level?** They mean different things operationally — a vendor declining is not the same as a booking that never got a response — even though both currently block the same aggregate status. Preserving the distinction now avoids losing operational history later.
@@ -258,7 +273,7 @@ Full interactive documentation is available at `/docs` once the API is running.
 
 ## Roadmap
 
-- [ ] Replace mock contracts with confirmed schemas from Itinerary Planning and Vendor Discovery
+- [x] ~~Replace mock contracts with confirmed schemas from Itinerary Planning and Vendor Discovery~~
 - [ ] Implement real `PartnerBookingAdapter` integrations as vendor partnerships are signed
 - [ ] Wire an actual re-ranking request back to Itinerary Planning on `ALTERNATE_NEEDED`
 - [ ] Move Ops Dashboard auth from a shared static token to per-agent authentication

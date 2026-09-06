@@ -1,47 +1,88 @@
 # ==============================================================================
-# MOCK CONTRACTS — pending confirmation from Yashaswini/Aman (NILE Pipeline)
+# UPSTREAM INTAKE CONTRACT — mirrors Yashaswini's confirmed Itinerary schema
 # ==============================================================================
+# Source: https://github.com/yashashwanidixit/nile-recommendation/blob/main/schemas/itinerary.py
+#
 # Upstream pipeline: Customer Intent -> Itinerary Planning -> Vendor Discovery
-#                   -> Vendor Intelligence -> Vendor Partnership & Fulfillment
+#                    -> Vendor Intelligence -> Vendor Partnership & Fulfillment
 # ==============================================================================
 
 from typing import List, Optional
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from pydantic import BaseModel, Field
 from app.models.booking import FulfillmentStatus
 from app.models.vendor import PartnershipStatus
 
 
-class ItineraryItemIntake(BaseModel):
+# ---------------------------------------------------------------------------
+# Intake schemas — mirroring Yashaswini's Itinerary structure exactly
+# ---------------------------------------------------------------------------
+
+class ActivityPlanIntake(BaseModel):
+    """Single bookable activity within a day, from Yashaswini's ActivityPlan."""
+    # TBD — pending confirmation from Yashaswini: assumes activity_id maps
+    # directly to our Vendor.id (UUID). If a translation/lookup step is needed,
+    # the mapping logic in routing.py is the single point to change.
+    activity_id: str
+    name: str
+    start_time: str = Field(..., pattern=r"^([01]\d|2[0-3]):[0-5]\d$", description="HH:MM format")
+    end_time: str = Field(..., pattern=r"^([01]\d|2[0-3]):[0-5]\d$", description="HH:MM format")
+    estimated_cost: float = Field(..., ge=0.0)
+
+
+class DayPlanIntake(BaseModel):
+    """A single day's plan containing its date and activities."""
+    day: int = Field(..., ge=1)
+    date: date
+    activities: List[ActivityPlanIntake]
+
+
+class HotelPlanIntake(BaseModel):
+    """Single hotel for the entire trip, from Yashaswini's HotelPlan."""
+    # TBD — pending confirmation from Yashaswini: assumes hotel_id maps
+    # directly to our Vendor.id (UUID). If a translation/lookup step is needed,
+    # the mapping logic in routing.py is the single point to change.
+    hotel_id: str
+    name: str
+
+
+class ItineraryIntake(BaseModel):
     """
-    # MOCK — pending confirmation from Yashaswini/Aman
-    Represents a single bookable item/activity/stay from the finalized itinerary.
+    Mirrors Yashaswini's Itinerary model exactly.
+    One hotel for the whole trip, activities nested inside day plans.
     """
-    vendor_id: str = Field(..., description="UUID of the selected vendor from Vendor Discovery")
-    service_date_start: Optional[datetime] = Field(None, description="Start date/time of booking")
-    service_date_end: Optional[datetime] = Field(None, description="End date/time of booking")
-    group_size: int = Field(1, ge=1, description="Number of travelers")
-    max_budget: Optional[Decimal] = Field(None, description="Max budget allocated from itinerary planner")
-    notes: Optional[str] = Field(None, description="Specific customer requirements or preferences")
+    destination: str
+    start_date: date
+    end_date: date
+    hotel: HotelPlanIntake
+    days: List[DayPlanIntake]
+    estimated_total_cost: float = Field(..., ge=0.0)
 
 
 class ItineraryFulfillmentIntakeRequest(BaseModel):
     """
-    # MOCK — pending confirmation from Yashaswini/Aman
-    Payload received by this module when an itinerary is finalized and ready for fulfillment.
-    """
-    itinerary_id: str = Field(..., description="Unique itinerary identifier from Itinerary Planning stage")
-    customer_id: Optional[str] = Field(None, description="Customer identifier")
-    trip_title: Optional[str] = Field("Bangalore to Goa Route", description="Human-readable title")
-    items: List[ItineraryItemIntake] = Field(..., min_length=1, description="List of vendor items to fulfill")
+    Envelope payload received when an itinerary is finalized and ready for fulfillment.
 
+    itinerary_id is a required, independently-provided unique identifier — it is
+    never derived from destination/dates or any other field combination.
+    """
+    itinerary_id: str = Field(..., description="Unique itinerary identifier, provided independently")
+    # TBD — pending confirmation from Yashaswini: customer_id and group_size are
+    # not present in her Itinerary schema. We assume they arrive as sibling fields
+    # alongside the itinerary object in the actual API call. Once the real envelope
+    # shape is confirmed, update these fields accordingly.
+    customer_id: Optional[str] = Field(None, description="Customer identifier (TBD — source unconfirmed)")
+    group_size: int = Field(1, ge=1, description="Number of travelers (TBD — source unconfirmed)")
+    itinerary: ItineraryIntake = Field(..., description="Nested itinerary from Yashaswini's Itinerary schema")
+
+
+# ---------------------------------------------------------------------------
+# Downstream status response schemas — unchanged from original
+# ---------------------------------------------------------------------------
 
 class FulfillmentItemStatusReport(BaseModel):
-    """
-    # MOCK — pending confirmation
-    Individual booking status report sent back upstream to update customer itinerary.
-    """
+    """Individual booking status report sent back upstream."""
     request_id: str
     vendor_id: str
     vendor_name: Optional[str] = None
@@ -55,10 +96,7 @@ class FulfillmentItemStatusReport(BaseModel):
 
 
 class OverallFulfillmentStatus(str):
-    """
-    # MOCK — pending confirmation
-    Aggregate status of the entire itinerary fulfillment.
-    """
+    """Aggregate status of the entire itinerary fulfillment."""
     ALL_CONFIRMED = "ALL_CONFIRMED"
     PARTIALLY_CONFIRMED = "PARTIALLY_CONFIRMED"
     BLOCKED_ALTERNATE_NEEDED = "BLOCKED_ALTERNATE_NEEDED"
@@ -68,7 +106,6 @@ class OverallFulfillmentStatus(str):
 
 class ItineraryFulfillmentStatusResponse(BaseModel):
     """
-    # MOCK — pending confirmation
     Full status payload reported back upstream to Yashaswini (Itinerary Planning)
     and customer-facing applications.
     """

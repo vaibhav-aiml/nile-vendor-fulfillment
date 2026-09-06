@@ -1,5 +1,8 @@
 from app.schemas.contracts import (
-    ItineraryItemIntake,
+    ActivityPlanIntake,
+    DayPlanIntake,
+    HotelPlanIntake,
+    ItineraryIntake,
     ItineraryFulfillmentIntakeRequest,
     FulfillmentItemStatusReport,
     OverallFulfillmentStatus,
@@ -22,7 +25,10 @@ from app.schemas.booking import (
 )
 
 __all__ = [
-    "ItineraryItemIntake",
+    "ActivityPlanIntake",
+    "DayPlanIntake",
+    "HotelPlanIntake",
+    "ItineraryIntake",
     "ItineraryFulfillmentIntakeRequest",
     "FulfillmentItemStatusReport",
     "OverallFulfillmentStatus",

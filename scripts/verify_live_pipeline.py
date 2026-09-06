@@ -70,24 +70,37 @@ def run_verification(base_url=BASE_URL, ops_token=DEFAULT_TOKEN):
     print(f"  [PASS] Created Non-Partnered Vendor ID: {non_partner_id}")
 
     # 3. POST /fulfillment/intake
-    print("\n[Step 3] Submitting mock itinerary intake to /api/v1/fulfillment/intake...")
+    print("\n[Step 3] Submitting itinerary intake to /api/v1/fulfillment/intake...")
     itinerary_id = f"itin_live_test_{int(time.time())}"
     intake_payload = {
         "itinerary_id": itinerary_id,
         "customer_id": "cust_live_01",
-        "trip_title": "Bangalore -> Goa Verified Route",
-        "items": [
-            {
-                "vendor_id": partner_id,
-                "group_size": 2,
-                "notes": "Deluxe Room",
+        "group_size": 2,
+        "itinerary": {
+            "destination": "Goa",
+            "start_date": "2026-10-15",
+            "end_date": "2026-10-17",
+            "hotel": {
+                "hotel_id": partner_id,
+                "name": "Partnered Hotel (Live Test)",
             },
-            {
-                "vendor_id": non_partner_id,
-                "group_size": 2,
-                "notes": "Dinner table",
-            },
-        ],
+            "days": [
+                {
+                    "day": 1,
+                    "date": "2026-10-15",
+                    "activities": [
+                        {
+                            "activity_id": non_partner_id,
+                            "name": "Dinner at Non-Partnered Venue",
+                            "start_time": "19:00",
+                            "end_time": "21:00",
+                            "estimated_cost": 3000.00,
+                        }
+                    ],
+                }
+            ],
+            "estimated_total_cost": 15000.00,
+        },
     }
     r3 = requests.post(f"{base_url}/api/v1/fulfillment/intake", json=intake_payload)
     print(f"  HTTP Status: {r3.status_code}")
