@@ -53,7 +53,7 @@ def list_fulfillment_requests(
         query = query.filter(
             FulfillmentRequest.sla_deadline.isnot(None),
             FulfillmentRequest.sla_deadline < now_utc,
-            FulfillmentRequest.status.in_([FulfillmentStatus.PENDING, FulfillmentStatus.OUTREACH_IN_PROGRESS]),
+            FulfillmentRequest.status.in_([FulfillmentStatus.PENDING, FulfillmentStatus.VENDOR_CONTACTED]),
         )
 
     total = query.count()
@@ -130,8 +130,14 @@ def update_fulfillment_status(
         event_type = "BOOKING_CONFIRMED"
     elif req.status == FulfillmentStatus.REJECTED:
         event_type = "BOOKING_REJECTED"
-    elif req.status == FulfillmentStatus.ALTERNATE_NEEDED:
-        event_type = "ALTERNATE_NEEDED"
+    elif req.status == FulfillmentStatus.NO_RESPONSE:
+        event_type = "VENDOR_NO_RESPONSE"
+    elif req.status == FulfillmentStatus.ALTERNATE_REQUIRED:
+        event_type = "ALTERNATE_REQUIRED"
+    elif req.status == FulfillmentStatus.COMPLETED:
+        event_type = "BOOKING_COMPLETED"
+    else:
+        event_type = "STATUS_UPDATED"
 
     event_publisher.publish_event(
         event_type=event_type,

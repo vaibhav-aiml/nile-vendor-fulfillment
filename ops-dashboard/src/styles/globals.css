@@ -294,6 +294,16 @@ button, input, select, textarea {
   color: var(--badge-alert-text);
 }
 
+.badge-no-response {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.badge-alert {
+  background: var(--badge-alert-bg);
+  color: var(--badge-alert-text);
+}
+
 .badge-channel {
   background: rgba(255, 255, 255, 0.06);
   color: #cbd5e1;

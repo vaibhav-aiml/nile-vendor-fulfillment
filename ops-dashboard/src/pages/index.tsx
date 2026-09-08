@@ -12,7 +12,39 @@ import {
   FulfillmentRequest,
   VendorContact,
   FulfillmentStatus,
+  FULFILLMENT_STATUSES,
 } from "../types";
+
+const STATUS_DISPLAY_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  VENDOR_CONTACTED: "Vendor Contacted",
+  CONFIRMED: "Confirmed",
+  REJECTED: "Rejected",
+  NO_RESPONSE: "No Response",
+  ALTERNATE_REQUIRED: "Alternate Required",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
+};
+
+function getStatusLabel(status: string): string {
+  return STATUS_DISPLAY_LABELS[status] || status.replace(/_/g, " ");
+}
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case "CONFIRMED":
+    case "COMPLETED":
+      return "badge-confirmed";
+    case "VENDOR_CONTACTED":
+      return "badge-progress";
+    case "PENDING":
+      return "badge-pending";
+    case "NO_RESPONSE":
+      return "badge-no-response";
+    default:
+      return "badge-alert";
+  }
+}
 
 export default function OpsDashboard() {
   const [requests, setRequests] = useState<FulfillmentRequest[]>([]);
@@ -30,7 +62,7 @@ export default function OpsDashboard() {
   const [loadingContact, setLoadingContact] = useState<boolean>(false);
   const [updating, setUpdating] = useState<boolean>(false);
 
-  const [formStatus, setFormStatus] = useState<FulfillmentStatus>("OUTREACH_IN_PROGRESS");
+  const [formStatus, setFormStatus] = useState<FulfillmentStatus>("VENDOR_CONTACTED");
   const [formPrice, setFormPrice] = useState<string>("");
   const [formAgent, setFormAgent] = useState<string>("ops_staff_1");
   const [formNotes, setFormNotes] = useState<string>("");
@@ -65,7 +97,7 @@ export default function OpsDashboard() {
 
   const handleOpenOutreach = async (req: FulfillmentRequest) => {
     setSelectedRequest(req);
-    setFormStatus(req.status === "PENDING" ? "OUTREACH_IN_PROGRESS" : req.status);
+    setFormStatus(req.status === "PENDING" ? "VENDOR_CONTACTED" : req.status);
     setFormPrice(req.pricing_locked ? String(req.pricing_locked) : "");
     setFormAgent(req.assigned_ops_agent || "ops_staff_1");
     setFormNotes("");
@@ -106,9 +138,15 @@ export default function OpsDashboard() {
 
   const totalCount = requests.length;
   const pendingCount = requests.filter((r) => r.status === "PENDING").length;
-  const inProgressCount = requests.filter((r) => r.status === "OUTREACH_IN_PROGRESS").length;
+  const contactedCount = requests.filter((r) => r.status === "VENDOR_CONTACTED").length;
   const confirmedCount = requests.filter((r) => r.status === "CONFIRMED").length;
   const slaAlertCount = requests.filter((r) => r.is_sla_breached).length;
+
+  const filterTabs: { label: string; val: string }[] = [
+    { label: "All", val: "ALL" },
+    ...FULFILLMENT_STATUSES.map((s) => ({ label: getStatusLabel(s), val: s })),
+    { label: "🚨 SLA Alert", val: "SLA_ALERT" },
+  ];
 
   return (
     <>
@@ -178,9 +216,9 @@ export default function OpsDashboard() {
             </span>
           </div>
           <div className="metric-card">
-            <span className="metric-label">In Outreach</span>
+            <span className="metric-label">Vendor Contacted</span>
             <span className="metric-value" style={{ color: "#818cf8" }}>
-              {inProgressCount}
+              {contactedCount}
             </span>
           </div>
           <div className="metric-card">
@@ -199,14 +237,7 @@ export default function OpsDashboard() {
 
         <section className="filter-bar">
           <div className="status-tabs">
-            {[
-              { label: "All", val: "ALL" },
-              { label: "Pending", val: "PENDING" },
-              { label: "In Outreach", val: "OUTREACH_IN_PROGRESS" },
-              { label: "🚨 SLA Alert", val: "SLA_ALERT" },
-              { label: "Confirmed", val: "CONFIRMED" },
-              { label: "Alternate Needed", val: "ALTERNATE_NEEDED" },
-            ].map((tab) => (
+            {filterTabs.map((tab) => (
               <button
                 key={tab.val}
                 className={`tab-btn ${activeTab === tab.val ? "active" : ""}`}
@@ -265,14 +296,7 @@ export default function OpsDashboard() {
           <div className="requests-container">
             {requests.map((req) => {
               const isBreached = req.is_sla_breached;
-              const statusClass =
-                req.status === "CONFIRMED"
-                  ? "badge-confirmed"
-                  : req.status === "OUTREACH_IN_PROGRESS"
-                  ? "badge-progress"
-                  : req.status === "PENDING"
-                  ? "badge-pending"
-                  : "badge-alert";
+              const statusClass = getStatusBadgeClass(req.status);
 
               return (
                 <div
@@ -290,7 +314,7 @@ export default function OpsDashboard() {
                     </div>
 
                     <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
-                      <span className={`badge ${statusClass}`}>{req.status.replace(/_/g, " ")}</span>
+                      <span className={`badge ${statusClass}`}>{getStatusLabel(req.status)}</span>
                       <span className="badge badge-channel">
                         {req.booking_channel === "PROGRAMMATIC_API" ? "⚡ API" : "📞 HITL"}
                       </span>
@@ -462,11 +486,11 @@ export default function OpsDashboard() {
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as FulfillmentStatus)}
                   >
-                    <option value="OUTREACH_IN_PROGRESS">Outreach In Progress (Contact initiated)</option>
-                    <option value="CONFIRMED">Confirmed (Vendor accepted & slot secured)</option>
-                    <option value="REJECTED">Rejected (Vendor declined or sold out)</option>
-                    <option value="ALTERNATE_NEEDED">Alternate Needed (Requires alternate vendor discovery)</option>
-                    <option value="CANCELLED">Cancelled (Customer/internal cancellation)</option>
+                    {FULFILLMENT_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {getStatusLabel(s)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

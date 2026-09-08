@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # SLA Configuration
     OUTREACH_SLA_HOURS: int = 24
+    SLA_ENFORCEMENT_ENABLED: bool = False
 
     # Ops Dashboard Security (Phase 1 static token check)
     OPS_AUTH_SECRET: str = ""

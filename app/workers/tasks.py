@@ -59,12 +59,12 @@ def attempt_partner_booking(request_id_str: str) -> dict:
             )
             return {"status": "confirmed", "external_ref": req.external_reference_id}
         else:
-            req.status = FulfillmentStatus.ALTERNATE_NEEDED
+            req.status = FulfillmentStatus.ALTERNATE_REQUIRED
             req.notes = (req.notes or "") + f" [Programmatic booking failed: {booking_result.error_message}]"
             db.commit()
 
             event_publisher.publish_event(
-                event_type="ALTERNATE_NEEDED",
+                event_type="ALTERNATE_REQUIRED",
                 payload={
                     "request_id": str(req.id),
                     "itinerary_id": req.itinerary_id,
@@ -72,7 +72,7 @@ def attempt_partner_booking(request_id_str: str) -> dict:
                     "reason": booking_result.error_message or "Partner API rejection",
                 },
             )
-            return {"status": "alternate_needed", "reason": booking_result.error_message}
+            return {"status": "alternate_required", "reason": booking_result.error_message}
     except Exception as e:
         logger.exception(f"Unexpected error executing partner booking for {request_id_str}: {e}")
         db.rollback()
@@ -114,8 +114,12 @@ def initiate_hitl_outreach(request_id_str: str) -> dict:
 def check_outreach_sla_timeouts() -> dict:
     """
     Periodic check for non-partnered requests exceeding SLA without confirmation.
-    Escalates status to ALTERNATE_NEEDED and emits notification event.
+    Escalates status to ALTERNATE_REQUIRED and emits notification event.
+    Gated behind SLA_ENFORCEMENT_ENABLED feature flag.
     """
+    if not settings.SLA_ENFORCEMENT_ENABLED:
+        return {"skipped": True, "reason": "SLA enforcement is disabled"}
+
     db = SessionLocal()
     now_utc = datetime.now(timezone.utc)
     escalated_count = 0
@@ -125,7 +129,7 @@ def check_outreach_sla_timeouts() -> dict:
             db.query(FulfillmentRequest)
             .filter(
                 FulfillmentRequest.booking_channel == BookingChannel.HITL_MANUAL,
-                FulfillmentRequest.status.in_([FulfillmentStatus.PENDING, FulfillmentStatus.OUTREACH_IN_PROGRESS]),
+                FulfillmentRequest.status.in_([FulfillmentStatus.PENDING, FulfillmentStatus.VENDOR_CONTACTED]),
                 FulfillmentRequest.sla_deadline.isnot(None),
                 FulfillmentRequest.sla_deadline < now_utc,
             )
@@ -133,7 +137,7 @@ def check_outreach_sla_timeouts() -> dict:
         )
 
         for req in breached_requests:
-            req.status = FulfillmentStatus.ALTERNATE_NEEDED
+            req.status = FulfillmentStatus.ALTERNATE_REQUIRED
             escalation_note = (
                 f"\n[SYSTEM SLA ESCALATION] Outreach SLA exceeded after "
                 f"{settings.OUTREACH_SLA_HOURS}h without vendor confirmation. "
@@ -149,14 +153,14 @@ def check_outreach_sla_timeouts() -> dict:
                     "itinerary_id": req.itinerary_id,
                     "vendor_id": str(req.vendor_id),
                     "sla_deadline": req.sla_deadline.isoformat() if req.sla_deadline else None,
-                    "status": FulfillmentStatus.ALTERNATE_NEEDED.value,
+                    "status": FulfillmentStatus.ALTERNATE_REQUIRED.value,
                     "reason": f"SLA of {settings.OUTREACH_SLA_HOURS} hours expired",
                 },
             )
 
         if escalated_count > 0:
             db.commit()
-            logger.warning(f"SLA Escalation: {escalated_count} requests marked ALTERNATE_NEEDED.")
+            logger.warning(f"SLA Escalation: {escalated_count} requests marked ALTERNATE_REQUIRED.")
 
         return {"escalated_count": escalated_count}
     except Exception as e:

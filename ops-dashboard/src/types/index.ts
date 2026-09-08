@@ -1,10 +1,15 @@
-export type FulfillmentStatus =
-  | "PENDING"
-  | "OUTREACH_IN_PROGRESS"
-  | "CONFIRMED"
-  | "REJECTED"
-  | "ALTERNATE_NEEDED"
-  | "CANCELLED";
+export const FULFILLMENT_STATUSES = [
+  "PENDING",
+  "VENDOR_CONTACTED",
+  "CONFIRMED",
+  "REJECTED",
+  "NO_RESPONSE",
+  "ALTERNATE_REQUIRED",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
+
+export type FulfillmentStatus = (typeof FULFILLMENT_STATUSES)[number];
 
 export type BookingChannel = "PROGRAMMATIC_API" | "HITL_MANUAL";
 

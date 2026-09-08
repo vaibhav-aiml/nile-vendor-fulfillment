@@ -52,6 +52,9 @@ class ItineraryIntake(BaseModel):
     Mirrors Yashaswini's Itinerary model exactly.
     One hotel for the whole trip, activities nested inside day plans.
     """
+    # TODO: CTO has requested category, location, and user_preferences per item —
+    # pending confirmation this will be added to Yashaswini's upstream Itinerary
+    # schema before we can consume it here.
     destination: str
     start_date: date
     end_date: date
@@ -98,8 +101,9 @@ class FulfillmentItemStatusReport(BaseModel):
 class OverallFulfillmentStatus(str):
     """Aggregate status of the entire itinerary fulfillment."""
     ALL_CONFIRMED = "ALL_CONFIRMED"
+    ALL_COMPLETED = "ALL_COMPLETED"
     PARTIALLY_CONFIRMED = "PARTIALLY_CONFIRMED"
-    BLOCKED_ALTERNATE_NEEDED = "BLOCKED_ALTERNATE_NEEDED"
+    BLOCKED_ALTERNATE_REQUIRED = "BLOCKED_ALTERNATE_REQUIRED"
     IN_PROGRESS = "IN_PROGRESS"
     CANCELLED = "CANCELLED"
 
