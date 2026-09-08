@@ -76,7 +76,7 @@ def test_ops_status_update(client, db_session, ops_auth_headers):
         id=uuid.uuid4(),
         itinerary_id="itin_ops_update",
         vendor_id=v.id,
-        status=FulfillmentStatus.OUTREACH_IN_PROGRESS,
+        status=FulfillmentStatus.VENDOR_CONTACTED,
         booking_channel=BookingChannel.HITL_MANUAL,
     )
     db_session.add(req)
@@ -107,7 +107,7 @@ def test_ops_status_update(client, db_session, ops_auth_headers):
 def test_ops_status_update_rejected_preserves_row_status_and_emits_event(client, db_session, ops_auth_headers, monkeypatch):
     """
     Verify that when ops marks a request as REJECTED:
-    1. The database row status is strictly REJECTED (never collapsed to ALTERNATE_NEEDED).
+    1. The database row status is strictly REJECTED (never collapsed to ALTERNATE_REQUIRED).
     2. The Redis Pub/Sub event emitted is specifically 'BOOKING_REJECTED'.
     """
     v = Vendor(
@@ -123,7 +123,7 @@ def test_ops_status_update_rejected_preserves_row_status_and_emits_event(client,
         id=uuid.uuid4(),
         itinerary_id="itin_ops_reject",
         vendor_id=v.id,
-        status=FulfillmentStatus.OUTREACH_IN_PROGRESS,
+        status=FulfillmentStatus.VENDOR_CONTACTED,
         booking_channel=BookingChannel.HITL_MANUAL,
     )
     db_session.add(req)
@@ -150,11 +150,11 @@ def test_ops_status_update_rejected_preserves_row_status_and_emits_event(client,
     )
     assert res.status_code == 200
 
-    # 1. Assert DB row level status is strictly REJECTED, NOT ALTERNATE_NEEDED
+    # 1. Assert DB row level status is strictly REJECTED, NOT ALTERNATE_REQUIRED
     db_session.expire_all()
     db_req = db_session.query(FulfillmentRequest).filter(FulfillmentRequest.id == req.id).first()
     assert db_req.status == FulfillmentStatus.REJECTED
-    assert db_req.status != FulfillmentStatus.ALTERNATE_NEEDED
+    assert db_req.status != FulfillmentStatus.ALTERNATE_REQUIRED
 
     # 2. Assert specific event type emitted is BOOKING_REJECTED
     assert len(emitted_events) == 1

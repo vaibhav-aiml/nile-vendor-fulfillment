@@ -70,7 +70,7 @@ def get_itinerary_fulfillment_status(
 ):
     """
     Aggregates all vendor booking states for a given itinerary and returns the
-    overall status (ALL_CONFIRMED, PARTIALLY_CONFIRMED, BLOCKED_ALTERNATE_NEEDED, IN_PROGRESS).
+    overall status (ALL_CONFIRMED, PARTIALLY_CONFIRMED, BLOCKED_ALTERNATE_REQUIRED, IN_PROGRESS).
     """
     requests = (
         db.query(FulfillmentRequest)

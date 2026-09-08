@@ -50,7 +50,7 @@ class FulfillmentRequestResponse(FulfillmentRequestBase):
         """
         if self.sla_deadline and self.status in (
             FulfillmentStatus.PENDING,
-            FulfillmentStatus.OUTREACH_IN_PROGRESS,
+            FulfillmentStatus.VENDOR_CONTACTED,
         ):
             now = datetime.now(timezone.utc)
             deadline = self.sla_deadline if self.sla_deadline.tzinfo else self.sla_deadline.replace(tzinfo=timezone.utc)
