@@ -87,6 +87,7 @@ button, input, select, textarea {
   text-transform: uppercase;
   background: linear-gradient(135deg, #06b6d4, #6366f1);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
